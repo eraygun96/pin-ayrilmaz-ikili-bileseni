@@ -1,0 +1,737 @@
+<!--
+  PIN DRINKS — "Ayrılmaz İkili" ana sayfa bileşeni
+  Ana söylem: "Peşindeki tek şey 5 yıldızlı lezzet."
+  Kurgu: Aranma yıldızları sürekli yanıp söner. "Göreve Başla: İndirim Kodunu Al" mini oyunu açar
+         ("Görev: Şekeri sıfırla"): tenekelerin etrafında süzülen 5 şeker küpüne dokunulur; her küp
+         bir yıldızı altına çevirir, Şeker ve Kalori barlarını beşte bir azaltır. Barlar sıfırlanınca
+         Ayrılmaz İkili tek tuşla sepete eklenir ve tüm ürünlerde geçerli %40 indirim kodu
+         (6 hane, kopyala butonlu) verilir. DEMO: kod 3 örnek koddan seçilir (getCode()).
+         Çözen kullanıcı ve aldığı kod tarayıcıda hatırlanır (localStorage). GTM olayları: pgta_oyun_basladi,
+         pgta_oyun_tamamlandi, pgta_kod_kopyalandi, pgta_sepete_ekle, pgta_odul_tekrar.
+
+  Kullanım: Bu dosyanın tamamını ana sayfada istenen yere (ör. .container içine) yapıştırın.
+  - Tüm stiller .pgta- önekiyle izole edilmiştir, sitenin diğer stillerini etkilemez.
+  - Font: Sitede zaten yüklü olan Poppins kullanılır.
+  - "Hareketi azalt" seçen kullanıcılarda animasyonlar kapanır, oyun yine çalışır.
+  - YAPILACAK:
+    1) data-id="AYRILMAZ_IKILI_URUN_ID" → Ayrılmaz İkili paketinin ürün ID'si (sayı).
+    2) getCode() → sunucudan tek kullanımlık, kişi başı bir kod alan istekle değiştirin
+       (kodlar panelde %40, tüm ürünlerde geçerli, tek kullanımlık tanımlı olmalı).
+    3) PAKET-LINKI-AYRILMAZ-IKILI → paketin ürün sayfası linki.
+    4) img/ yollarını CDN adresleriyle (cdn.pindrinks.com/...) değiştirin.
+-->
+<style>
+  .pgta {
+    --pgta-ink: #1c1036;
+    --pgta-violet: #3b1a6e;
+    --pgta-pink: #f7b3d0;
+    --pgta-hot: #ff5c9e;
+    --pgta-gold: #ffc93c;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 45px;
+    margin: 50px 0;
+    min-height: 0;
+    font-family: Poppins, system-ui, sans-serif;
+    color: #fff;
+    background: linear-gradient(180deg, #1d3fa6 0%, #3b47c4 22%, #7a4cc6 46%, #d374b9 66%, #f59f8a 80%, #1b1426 80.2%, #241838 100%);
+    -webkit-font-smoothing: antialiased;
+  }
+  .pgta *, .pgta *::before, .pgta *::after { box-sizing: border-box; }
+
+  /* --- sahne: güneş, palmiyeler, yol --- */
+  .pgta-scene { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+  .pgta-sky { position: absolute; left: 0; right: 0; top: 0; height: 80%; overflow: hidden; }
+  .pgta-sun {
+    position: absolute; left: 70%; bottom: 0; width: 380px; height: 190px;
+    transform: translateX(-50%); border-radius: 190px 190px 0 0;
+    background: linear-gradient(180deg, #ffe3a1 0%, #ffb36b 55%, #ff7d9a 100%);
+    -webkit-mask: linear-gradient(180deg, #000 0 52%, transparent 52% 58%, #000 58% 68%, transparent 68% 74%, #000 74% 82%, transparent 82% 88%, #000 88%);
+    mask: linear-gradient(180deg, #000 0 52%, transparent 52% 58%, #000 58% 68%, transparent 68% 74%, #000 74% 82%, transparent 82% 88%, #000 88%);
+    opacity: .9;
+  }
+  .pgta-sun-glow {
+    position: absolute; left: 70%; bottom: -120px; width: 540px; height: 300px; transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgba(255, 190, 150, .55), transparent);
+  }
+  .pgta-palms { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .pgta-palms-m { display: none; }
+  .pgta-horizon {
+    position: absolute; left: 0; right: 0; top: 80%; height: 2px;
+    background: linear-gradient(90deg, transparent, #ffd1a8 20%, #fff0dc 50%, #ffd1a8 80%, transparent);
+    box-shadow: 0 0 18px 4px rgba(255, 170, 140, .55);
+  }
+  .pgta-lights { position: absolute; left: 0; right: 0; top: calc(80% + 10px); display: flex; justify-content: space-around; }
+  .pgta-lights i {
+    width: 46px; height: 5px; border-radius: 3px; background: #ffb56b;
+    box-shadow: 0 0 14px 3px rgba(255, 160, 80, .8), 0 26px 30px 6px rgba(255, 140, 80, .18);
+  }
+  .pgta-road-line {
+    position: absolute; left: -5%; bottom: 7%; width: 55%; height: 6px; border-radius: 3px;
+    background: rgba(255, 255, 255, .55); transform: rotate(-6deg); transform-origin: left;
+    filter: blur(.4px);
+  }
+
+  /* --- içerik düzeni --- */
+  .pgta-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+    grid-template-areas: "copy stage";
+    align-items: center;
+    gap: 24px;
+    padding: 24px 64px 0;
+    min-height: 0;
+  }
+  .pgta-copy { grid-area: copy; align-self: center; padding-bottom: 100px; }
+  .pgta-stage { grid-area: stage; align-self: end; padding-top: 40px; }
+
+  /* --- HUD paneli: yıldızlar --- */
+  .pgta-hudbox {
+    display: inline-flex; flex-direction: column; gap: 12px;
+    padding: 14px 18px 14px; border-radius: 20px;
+    background: rgba(28, 16, 54, .55); border: 1px solid rgba(255, 255, 255, .22);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 12px 30px rgba(20, 8, 40, .3);
+  }
+  .pgta-meter { display: flex; align-items: center; justify-content: center; }
+  .pgta-hudbox .pgta-stars { gap: 10px; }
+  .pgta-hudbox .pgta-star { width: 34px; height: 34px; }
+  .pgta-meter-label {
+    min-width: 168px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    transition: color .3s ease;
+  }
+  .pgta-stars { display: flex; gap: 6px; }
+  .pgta-star { width: 30px; height: 30px; display: block; overflow: visible; }
+  .pgta-star path {
+    stroke-width: 1.6; stroke-linejoin: round;
+    transition: fill .35s ease, stroke .35s ease, transform .35s cubic-bezier(.3, 1.6, .5, 1);
+    transform-origin: 12px 12px; transform-box: view-box;
+  }
+
+  /* Yıldızlar — varsayılan: aranıyorsun (beyaz, polis ışığı gibi kırmızı/mavi yanıp söner) */
+  .pgta-star path { fill: #fff; stroke: #fff; }
+  .pgta-star { animation: pgta-siren .5s steps(1) infinite; }
+  .pgta-star:nth-child(even) { animation-delay: .25s; }
+  @keyframes pgta-siren {
+    0% { filter: drop-shadow(0 0 7px rgba(255, 60, 80, .95)); }
+    50% { filter: drop-shadow(0 0 7px rgba(70, 130, 255, .95)); }
+  }
+  /* Şifre girilince: altın lezzet yıldızı */
+  .pgta-star.is-gold { animation: pgta-pop .5s ease both; filter: drop-shadow(0 0 8px rgba(255, 201, 60, .7)); }
+  .pgta-star.is-gold path { fill: var(--pgta-gold); stroke: #fff3c4; }
+  @keyframes pgta-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  .pgta-meter-label { color: #fff; }
+  .pgta.is-solved .pgta-meter-label { color: var(--pgta-gold); }
+
+  /* Yıldız kutusu + (çözülünce) sağında 0 Şeker Kalori logosu — yan yana, bölüm aşağı büyümez */
+  .pgta-hudrow { display: flex; align-items: center; gap: 18px; flex-wrap: nowrap; }
+  .pgta-badge { display: block; height: 36px; width: auto; } /* resmi "0 Şeker Kalori" logosu */
+  .pgta-hud-badge { display: none; height: 46px; flex: none; }
+  .pgta.is-solved .pgta-hud-badge { display: block; animation: pgta-pop .5s ease both; }
+
+  /* --- başlık ve metin --- */
+  .pgta-title {
+    margin: 22px 0 14px; font-size: clamp(36px, 4.2vw, 60px); line-height: 1; font-weight: 800;
+    text-transform: uppercase; letter-spacing: -.01em; color: #fff;
+    text-shadow: 3px 3px 0 var(--pgta-ink), -1px -1px 0 var(--pgta-ink), 1px -1px 0 var(--pgta-ink), -1px 1px 0 var(--pgta-ink), 0 10px 30px rgba(28, 16, 54, .45);
+  }
+  .pgta-title em { font-style: normal; color: var(--pgta-gold); display: block; }
+  .pgta-sub { margin: 0 0 26px; font-size: 18px; line-height: 1.5; max-width: 34ch; text-shadow: 0 2px 10px rgba(28, 16, 54, .4); }
+  .pgta-sub strong { font-weight: 700; }
+
+  .pgta-cta {
+    display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+    padding: 16px 30px; border: 0; border-radius: 999px; text-decoration: none; cursor: pointer; font-family: inherit;
+    background: linear-gradient(90deg, var(--pgta-hot), #ff8a5c); color: #fff;
+    font-size: 18px; font-weight: 700; letter-spacing: .02em;
+    box-shadow: 0 10px 26px rgba(255, 92, 158, .45), inset 0 -3px 0 rgba(0, 0, 0, .12);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .pgta-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(255, 92, 158, .55), inset 0 -3px 0 rgba(0, 0, 0, .12); color: #fff; text-decoration: none; }
+  .pgta-cta:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .pgta-cta svg { width: 20px; height: 20px; transition: transform .2s ease; }
+  .pgta-cta:hover svg { transform: translateX(3px); }
+  .pgta-cta small { font-size: inherit; font-weight: 500; }
+
+  /* --- ikili paket --- */
+  .pgta-pack { position: relative; display: flex; flex-direction: column; align-items: center; text-decoration: none; color: inherit; }
+  .pgta-pack:hover { color: inherit; text-decoration: none; }
+  .pgta-cans { display: flex; justify-content: center; align-items: flex-end; gap: clamp(10px, 1.6vw, 22px); }
+  .pgta-can {
+    position: relative; height: clamp(250px, 25vw, 340px); display: block;
+    filter: drop-shadow(0 22px 20px rgba(10, 4, 24, .55)) drop-shadow(0 0 22px rgba(255, 179, 208, .3));
+    transition: transform .35s cubic-bezier(.2, .8, .2, 1);
+  }
+  .pgta-can img { height: 100%; width: auto; display: block; }
+  .pgta-can::after { /* zemindeki ışık yansıması */
+    content: ""; position: absolute; left: 8%; right: 8%; bottom: -14px; height: 22px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 170, 140, .45), transparent);
+  }
+  .pgta-pack:hover .pgta-can { transform: translateY(-8px); }
+  .pgta-pack:hover .pgta-can + .pgta-can { transition-delay: .05s; }
+
+  .pgta-marker { /* GTA tarzı görev işaretçisi — paketi işaret eder */
+    position: absolute; top: -50px; left: 50%; width: 32px; height: 40px; transform: translateX(-50%);
+  }
+  .pgta-pack-name { /* Kabut Hitam — font sitede app.css ile zaten yüklü */
+    position: relative; z-index: 2; display: block; margin: 0 0 2px;
+    font-family: 'Kabut Hitam', 'Brush Script MT', cursive; font-weight: 400;
+    font-size: clamp(64px, 6.6vw, 100px); line-height: 1; color: #fef6dd; white-space: nowrap;
+    transform: rotate(-5deg);
+    text-shadow: 0 4px 4px rgba(0, 0, 0, .25), 0 0 24px rgba(255, 92, 158, .55), 0 0 2px rgba(59, 26, 110, .6);
+  }
+  .pgta-pack-tagline {
+    display: block; margin: 0 0 14px; font-size: 16px; font-weight: 600; letter-spacing: .01em; color: #fff;
+    text-shadow: 0 2px 10px rgba(28, 16, 54, .55);
+  }
+  /* teneke üstü etiketler: yeni lezzet / efsane */
+  .pgta-sticker {
+    position: absolute; top: -12px; z-index: 2; padding: 6px 11px; border-radius: 9px; white-space: nowrap;
+    font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1;
+    box-shadow: 0 6px 14px rgba(20, 8, 40, .35);
+  }
+  .pgta-sticker--legend { right: -12px; transform: rotate(9deg); background: var(--pgta-gold); color: var(--pgta-ink); }
+  .pgta-marker svg { width: 100%; height: 100%; filter: drop-shadow(0 0 10px rgba(255, 210, 120, .9)); animation: pgta-bob 1.2s ease-in-out infinite; }
+  @keyframes pgta-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+
+  .pgta-pack .pgta-cans { margin-bottom: 26px; }
+
+  /* "Sınırlı sayıda" — butonun altında, nabız gibi atan nokta ile */
+  .pgta-limited {
+    display: flex; width: max-content; align-items: center; gap: 8px; margin: 14px 0 0;
+    padding: 7px 14px 7px 12px; border-radius: 999px; background: #fff; box-shadow: 0 6px 16px rgba(20, 8, 40, .3);
+    font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--pgta-hot);
+  }
+  .pgta-limited::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pgta-hot);
+    box-shadow: 0 0 0 0 rgba(255, 92, 158, .6); animation: pgta-ping 1.6s ease-out infinite;
+  }
+  @keyframes pgta-ping { 0% { box-shadow: 0 0 0 0 rgba(255, 92, 158, .6); } 100% { box-shadow: 0 0 0 9px rgba(255, 92, 158, 0); } }
+  .pgta-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* --- mini oyun --- */
+  .pgta, .pgta-game { /* oyun mobilde body'ye taşındığı için değişkenler ikisinde de tanımlı */
+    --pgta-ink: #1c1036; --pgta-violet: #3b1a6e; --pgta-pink: #f7b3d0; --pgta-hot: #ff5c9e; --pgta-gold: #ffc93c;
+  }
+  .pgta-game, .pgta-game * { box-sizing: border-box; }
+  .pgta-game {
+    font-family: Poppins, system-ui, sans-serif; color: #fff; -webkit-font-smoothing: antialiased;
+    position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px;
+    background: rgba(18, 8, 38, .72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    animation: pgta-fade .25s ease both;
+  }
+  .pgta-game[hidden] { display: none; }
+  @keyframes pgta-fade { from { opacity: 0; } to { opacity: 1; } }
+  .pgta-game-panel {
+    position: relative; width: 100%; max-width: 460px; max-height: 100%; overflow-y: auto;
+    padding: 26px 24px 24px; border-radius: 28px; text-align: center;
+    background: linear-gradient(180deg, rgba(43, 22, 86, .97), rgba(28, 16, 54, .97));
+    border: 1px solid rgba(255, 255, 255, .18); box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+    animation: pgta-rise .35s cubic-bezier(.2, .9, .3, 1.2) both;
+  }
+  @keyframes pgta-rise { from { transform: translateY(24px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+  .pgta-game-panel.is-wrong { animation: pgta-shake .4s ease; }
+  @keyframes pgta-shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+  .pgta-game-close {
+    position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 0;
+    background: rgba(255, 255, 255, .1); color: #fff; font-size: 24px; line-height: 1; cursor: pointer;
+  }
+  .pgta-game-close:hover { background: rgba(255, 255, 255, .2); }
+  .pgta-game-kicker { margin: 0 0 4px; padding: 0 40px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--pgta-pink); }
+  .pgta-game-title { margin: 0 0 14px; font-size: 26px; font-weight: 800; text-transform: uppercase; color: #fff; }
+  .pgta-game .pgta-stars { justify-content: center; gap: 8px; margin-bottom: 16px; }
+  .pgta-game .pgta-star { width: 34px; height: 34px; }
+
+  /* oyun alanı: tenekelerin etrafında süzülen şeker küpleri */
+  .pgta-arena {
+    position: relative; height: 230px; margin: 0 0 14px; border-radius: 20px; overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 100%, rgba(255, 140, 170, .28), transparent 60%), rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .1);
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  }
+  .pgta-arena-cans { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 8px; align-items: flex-end; pointer-events: none; }
+  .pgta-arena-cans img { height: 140px; width: auto; display: block; filter: drop-shadow(0 10px 10px rgba(0, 0, 0, .4)); }
+  .pgta-cube {
+    position: absolute; width: 58px; height: 58px; padding: 0; border: 0; background: none; cursor: pointer;
+    animation: pgta-float var(--t, 3s) ease-in-out infinite; -webkit-tap-highlight-color: transparent;
+  }
+  .pgta-cube svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .35)); transition: transform .12s ease; }
+  .pgta-cube:hover svg { transform: scale(1.1); }
+  .pgta-cube:focus-visible { outline: 3px solid #fff; outline-offset: 2px; border-radius: 12px; }
+  .pgta-cube.is-pop { animation: pgta-cube-pop .4s ease forwards; pointer-events: none; }
+  .pgta-cube.is-pop::after {
+    content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid var(--pgta-gold);
+    animation: pgta-ring .4s ease-out forwards;
+  }
+  .pgta-cube[data-gone] { visibility: hidden; }
+  @keyframes pgta-float { 0%, 100% { transform: translate(0, 0) rotate(-8deg); } 50% { transform: translate(var(--dx, 8px), var(--dy, -10px)) rotate(8deg); } }
+  @keyframes pgta-cube-pop { 0% { transform: scale(1); opacity: 1; } 45% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(.2); opacity: 0; } }
+  @keyframes pgta-ring { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+
+  /* şeker ve kalori barları: küp patladıkça azalır */
+  .pgta-bars { display: grid; gap: 8px; margin: 0 0 10px; text-align: left; }
+  .pgta-bar {
+    display: grid; grid-template-columns: 60px 1fr; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .85);
+  }
+  .pgta-bar-track { display: block; height: 14px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .15); }
+  .pgta-bar-fill { display: block; height: 100%; width: 100%; border-radius: inherit; transition: width .45s cubic-bezier(.3, .9, .3, 1); }
+  .pgta-bar--seker .pgta-bar-fill { background: linear-gradient(90deg, #ff5c9e, #ff9ac4); }
+  .pgta-bar--kalori .pgta-bar-fill { background: linear-gradient(90deg, #ff8a5c, #ffc93c); }
+
+  .pgta-game-hint { min-height: 22px; margin: 0; font-size: 14px; color: rgba(255, 255, 255, .8); }
+
+  /* ödül ekranı */
+  .pgta-win[hidden], .pgta-play[hidden] { display: none; }
+  .pgta-win .pgta-badge { height: 44px; margin: 4px auto 16px; }
+  /* indirim kodu: öne çıkan altın kutu */
+  .pgta-coupon {
+    position: relative; margin: 0 0 16px; padding: 16px 14px 14px; border-radius: 20px;
+    background: radial-gradient(120% 140% at 50% 0%, rgba(255, 201, 60, .22), rgba(255, 201, 60, .06) 60%), rgba(255, 255, 255, .04);
+    border: 2px solid var(--pgta-gold);
+    animation: pgta-glow 2s ease-in-out infinite;
+  }
+  @keyframes pgta-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 201, 60, .0), 0 0 18px rgba(255, 201, 60, .25); }
+    50% { box-shadow: 0 0 0 4px rgba(255, 201, 60, .15), 0 0 34px rgba(255, 201, 60, .45); }
+  }
+  .pgta-coupon-label {
+    display: flex; align-items: baseline; justify-content: center; gap: 8px; margin-bottom: 10px;
+    font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #fff;
+  }
+  .pgta-coupon-label b { font-size: 40px; line-height: .9; font-weight: 800; letter-spacing: -.02em; color: var(--pgta-gold); text-shadow: 0 0 18px rgba(255, 201, 60, .55); }
+  .pgta-coupon-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .pgta-coupon-code {
+    padding: 6px 14px; border-radius: 12px; background: rgba(28, 16, 54, .55);
+    font-size: 32px; font-weight: 800; letter-spacing: .14em; color: #fff; font-family: inherit;
+    text-shadow: 0 0 14px rgba(255, 201, 60, .6);
+  }
+  .pgta-plus { /* sitedeki ürün kartı artı butonu: lacivert daire + beyaz artı */
+    display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; flex: none;
+    background: #1a3258; color: #fff;
+  }
+  .pgta-plus svg { width: 24px; height: 24px; display: block; }
+  .pgta-addcart.is-added .pgta-plus { display: none; }
+  .pgta-copybtn {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 14px; border-radius: 12px; border: 0; cursor: pointer;
+    background: #fff; color: var(--pgta-violet); font-family: inherit; font-size: 14px; font-weight: 700;
+  }
+  .pgta-copybtn svg { width: 16px; height: 16px; }
+  .pgta-copybtn.is-copied { background: var(--pgta-gold); color: var(--pgta-ink); }
+  .pgta-coupon small { display: block; margin-top: 8px; font-size: 12px; color: rgba(255, 255, 255, .7); }
+  .pgta-addcart {
+    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 56px; padding: 14px 20px;
+    border-radius: 999px; text-decoration: none; cursor: pointer;
+    background: linear-gradient(90deg, var(--pgta-hot), #ff8a5c); color: #fff; font-size: 17px; font-weight: 700;
+    box-shadow: 0 10px 26px rgba(255, 92, 158, .45), inset 0 -3px 0 rgba(0, 0, 0, .12);
+  }
+  .pgta-addcart:hover { color: #fff; text-decoration: none; filter: brightness(1.05); }
+  .pgta-addcart.is-loading { opacity: .75; pointer-events: none; }
+  .pgta-addcart.is-added { background: #2fbf71; box-shadow: 0 10px 26px rgba(47, 191, 113, .4); pointer-events: none; }
+  .pgta-gocart { display: inline-block; margin-top: 12px; color: #fff; font-weight: 600; font-size: 15px; text-decoration: underline; }
+  .pgta-gocart[hidden] { display: none; }
+
+  /* --- tablet & mobil --- */
+  @media (max-width: 991px) {
+    .pgta { border-radius: 32px; min-height: 0;
+      background: linear-gradient(180deg, #1d3fa6 0%, #3b47c4 18%, #7a4cc6 40%, #d374b9 58%, #f59f8a 72%, #1b1426 72.2%, #241838 100%); }
+    .pgta-inner { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 26px 24px 0; gap: 8px; min-height: 0; }
+    .pgta-copy { display: contents; }
+    .pgta-copy > * { order: 0; }
+    .pgta-stage { order: 1; align-self: stretch; padding-top: 56px; }
+    .pgta-limited { order: 2; margin: 2px 0 12px; }
+    .pgta-cta { order: 3; margin: 0 0 26px; }
+    .pgta-pack .pgta-cans { margin-bottom: 20px; }
+    .pgta-hudbox { align-items: center; }
+    .pgta-sub { margin-left: auto; margin-right: auto; margin-bottom: 0; }
+    .pgta-sky { height: 72%; }
+    .pgta-sun, .pgta-sun-glow { left: 50%; }
+    .pgta-sun { width: 280px; height: 140px; }
+    .pgta-horizon { top: 72%; }
+    .pgta-lights { top: calc(72% + 10px); }
+    .pgta-palms-m { display: inline; }
+    /* mobilde oyun tam ekran açılır */
+    .pgta-game { position: fixed; z-index: 9999; padding: 14px; }
+  }
+  @media (max-width: 575px) {
+    .pgta { margin: 30px 0; border-radius: 24px; }
+    .pgta-inner { padding: 18px 14px 0; gap: 6px; }
+    .pgta-title { font-size: clamp(25px, 8vw, 31px); margin: 14px 0 8px; }
+    .pgta-stage { padding-top: 42px; }
+    .pgta-marker { width: 26px; height: 32px; top: -38px; }
+    .pgta-pack-name { font-size: 54px; }
+    .pgta-pack .pgta-cans { margin-bottom: 16px; }
+    .pgta-hudbox { padding: 12px 12px; gap: 10px; }
+    .pgta-meter { flex-direction: column; gap: 8px; }
+    .pgta-meter-label { min-width: 0; font-size: 11px; }
+    .pgta-star { width: 26px; height: 26px; }
+    .pgta-hudbox .pgta-stars { gap: 8px; }
+    .pgta-hudbox .pgta-star { width: 30px; height: 30px; }
+    .pgta-hudrow { gap: 12px; }
+    .pgta-hud-badge { height: 38px; }
+    .pgta-badge { height: 32px; }
+    .pgta-game-panel { padding: 22px 16px 18px; border-radius: 24px; }
+    .pgta-game-title { font-size: 22px; }
+    .pgta-arena { height: 220px; }
+    .pgta-arena-cans img { height: 128px; }
+    .pgta-cube { width: 56px; height: 56px; }
+    .pgta-coupon-code { font-size: 26px; padding: 6px 10px; }
+    .pgta-coupon-label b { font-size: 34px; }
+    .pgta-addcart { font-size: 15px; gap: 8px; padding: 12px 16px; white-space: nowrap; }
+    .pgta-plus { width: 26px; height: 26px; }
+    .pgta-plus svg { width: 20px; height: 20px; }
+    .pgta-sub { font-size: 16px; }
+    .pgta-can { height: 215px; }
+    .pgta-pack-tagline { font-size: 14px; margin-bottom: 12px; }
+    .pgta-sticker { font-size: 10px; padding: 5px 8px; }
+    .pgta-sticker--legend { right: -8px; }
+    .pgta-cta { font-size: 14px; padding: 14px 18px; gap: 8px; flex-wrap: nowrap; }
+    .pgta-cta [data-pgta-cta-text] { white-space: nowrap; }
+    .pgta-cta svg { width: 18px; height: 18px; flex: none; }
+    .pgta-lights i { width: 30px; }
+    .pgta-lights i:nth-child(n+4) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pgta *, .pgta *::before, .pgta *::after, .pgta-game, .pgta-game * { animation: none !important; transition: none !important; }
+    .pgta-star:not(.is-gold) { filter: drop-shadow(0 0 6px rgba(255, 60, 80, .9)); }
+  }
+</style>
+
+<section class="pgta" aria-labelledby="pgta-title">
+  <div class="pgta-scene" aria-hidden="true">
+   <div class="pgta-sky">
+    <div class="pgta-sun-glow"></div>
+    <div class="pgta-sun"></div>
+    <svg class="pgta-palms" viewBox="0 0 1400 620" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <path id="pgta-frond" d="M0 0C38-26 104-30 168 18L160 21 163 34 149 25 148 40 134 28 131 43 118 27 113 40 102 23 95 35 86 18 78 29 70 12 61 21 54 6 45 12Z"/>
+        <g id="pgta-palm">
+          <path d="M-7 0C-12 200 2 410-16 620H16C22 410 8 200 7 0Z"/>
+          <use href="#pgta-frond" transform="rotate(-28)"/>
+          <use href="#pgta-frond" transform="rotate(6)"/>
+          <use href="#pgta-frond" transform="rotate(38) scale(.9)"/>
+          <use href="#pgta-frond" transform="rotate(66) scale(.75)"/>
+          <use href="#pgta-frond" transform="scale(-1 1) rotate(-28)"/>
+          <use href="#pgta-frond" transform="scale(-1 1) rotate(6)"/>
+          <use href="#pgta-frond" transform="scale(-1 1) rotate(38) scale(.9)"/>
+          <use href="#pgta-frond" transform="scale(-1 1) rotate(66) scale(.75)"/>
+          <use href="#pgta-frond" transform="rotate(-70) scale(.7)"/>
+          <use href="#pgta-frond" transform="scale(-1 1) rotate(-70) scale(.7)"/>
+        </g>
+      </defs>
+      <g fill="#6a3a9a" opacity=".55">
+        <use href="#pgta-palm" transform="translate(240 446) scale(.28)"/>
+        <use href="#pgta-palm" transform="translate(330 496) scale(.2)"/>
+        <use href="#pgta-palm" transform="translate(1110 459) scale(.26)"/>
+        <use href="#pgta-palm" transform="translate(1030 508) scale(.18)"/>
+      </g>
+      <g fill="#2a1450" opacity=".9">
+        <use href="#pgta-palm" transform="translate(60 236) scale(.62) rotate(-4)"/>
+        <use href="#pgta-palm" transform="translate(160 372) scale(.4) rotate(5)"/>
+        <use href="#pgta-palm" transform="translate(1340 223) scale(.64) rotate(5)"/>
+        <use href="#pgta-palm" transform="translate(1240 360) scale(.42) rotate(-6)"/>
+      </g>
+      <g class="pgta-palms-m" fill="#2a1450" opacity=".85">
+        <use href="#pgta-palm" transform="translate(560 384) scale(.38) rotate(-5)"/>
+        <use href="#pgta-palm" transform="translate(845 409) scale(.34) rotate(6)"/>
+      </g>
+    </svg>
+   </div>
+    <div class="pgta-horizon"></div>
+    <div class="pgta-lights"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="pgta-road-line"></div>
+  </div>
+
+  <div class="pgta-inner">
+    <div class="pgta-copy">
+      <div class="pgta-hudrow">
+      <div class="pgta-hudbox">
+        <div class="pgta-meter">
+          <div class="pgta-stars" data-pgta-hudstars role="img" aria-label="Aranma seviyesi: 5 yıldız">
+            <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+            <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+            <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+            <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+            <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          </div>
+        </div>
+      </div>
+        <img class="pgta-badge pgta-hud-badge" src="img/0-seker-kalori-beyaz.svg" alt="0 Şeker 0 Kalori" width="1643" height="815">
+      </div>
+
+      <h2 class="pgta-title" id="pgta-title">Peşindeki <span style="white-space:nowrap">tek şey</span> <em>5 yıldızlı lezzet</em></h2>
+
+      <p class="pgta-sub">Görevi tamamla, 0 şeker, 0 kalori oyun eşlikçini <strong>%40 indirimle</strong> al.</p>
+
+      <button type="button" class="pgta-cta" data-pgta-start aria-haspopup="dialog">
+        <span data-pgta-cta-text>Göreve Başla: <small>İndirim Kodunu Al</small></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+      <span class="pgta-limited">Sınırlı sayıda</span>
+    </div>
+
+    <div class="pgta-stage">
+      <a class="pgta-pack" href="https://pindrinks.com/PAKET-LINKI-AYRILMAZ-IKILI" aria-label="Ayrılmaz İkili paketi: Beyaz Şeftali ve Vitaminli Şeftali" tabindex="-1">
+        <span class="pgta-marker" aria-hidden="true"><svg viewBox="0 0 30 38"><path d="M2 2h26L15 36z" fill="#ffd27a" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></span>
+        <span class="pgta-pack-name" aria-hidden="true">Ayrılmaz İkili</span>
+        <span class="pgta-pack-tagline">Efsane yeni ambalajında</span>
+        <span class="pgta-cans">
+          <span class="pgta-can"><img src="img/beyaz-seftali-teneke.webp" alt="PIN Beyaz Şeftali teneke" width="398" height="1000" loading="lazy"></span>
+          <span class="pgta-can"><span class="pgta-sticker pgta-sticker--legend">Efsane</span><img src="img/vitaminli-seftali-teneke.webp" alt="PIN Vitaminli Soğuk Çay Şeftali teneke" width="399" height="1000" loading="lazy"></span>
+        </span>
+      </a>
+    </div>
+  </div>
+
+  <!-- MİNİ OYUN -->
+  <div class="pgta-game" role="dialog" aria-modal="true" aria-labelledby="pgta-game-title" hidden>
+    <div class="pgta-game-panel">
+      <button type="button" class="pgta-game-close" data-pgta-close aria-label="Kapat">×</button>
+
+      <div class="pgta-play">
+        <p class="pgta-game-kicker">Görev: Şekeri sıfırla</p>
+        <h3 class="pgta-game-title" id="pgta-game-title">Şekerleri patlat</h3>
+        <div class="pgta-stars" data-pgta-gamestars aria-hidden="true">
+          <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+        </div>
+        <div class="pgta-arena" data-pgta-arena>
+          <span class="pgta-arena-cans" aria-hidden="true">
+            <img src="img/beyaz-seftali-teneke.webp" alt="" width="398" height="1000">
+            <img src="img/vitaminli-seftali-teneke.webp" alt="" width="399" height="1000">
+          </span>
+          <!-- şeker küpleri JS ile eklenir -->
+        </div>
+        <div class="pgta-bars">
+          <div class="pgta-bar pgta-bar--seker"><span>Şeker</span><span class="pgta-bar-track" role="progressbar" aria-label="Şeker" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span class="pgta-bar-fill"></span></span></div>
+          <div class="pgta-bar pgta-bar--kalori"><span>Kalori</span><span class="pgta-bar-track" role="progressbar" aria-label="Kalori" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span class="pgta-bar-fill"></span></span></div>
+        </div>
+        <p class="pgta-game-hint" data-pgta-hint aria-live="polite">Şeker küplerine dokun, hepsini patlat!</p>
+      </div>
+
+      <div class="pgta-win" hidden>
+        <p class="pgta-game-kicker">Görev tamamlandı</p>
+        <h3 class="pgta-game-title">Şeker sıfırlandı!</h3>
+        <div class="pgta-stars" aria-label="Lezzet: 5 yıldız" role="img">
+          <svg class="pgta-star is-gold" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star is-gold" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star is-gold" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star is-gold" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+          <svg class="pgta-star is-gold" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
+        </div>
+        <img class="pgta-badge" src="img/0-seker-kalori-beyaz.svg" alt="0 Şeker 0 Kalori" width="1643" height="815">
+        <div class="pgta-coupon">
+          <span class="pgta-coupon-label"><b>%40</b> indirim kodun</span>
+          <div class="pgta-coupon-row">
+            <span class="pgta-coupon-code" data-pgta-coupon>------</span>
+            <button type="button" class="pgta-copybtn" data-pgta-copy>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              <span data-pgta-copy-text>Kopyala</span>
+            </button>
+          </div>
+          <small>Tüm ürünlerde geçerli · Tek kullanımlık</small>
+        </div>
+        <!-- YAPILACAK: data-id = Ayrılmaz İkili paketinin ürün ID'si (sayı). Sepete ekleme sitenin kendi .add-to-cart-button akışıyla çalışır. -->
+        <a href="#" class="add-to-cart-button pgta-addcart" data-id="AYRILMAZ_IKILI_URUN_ID" data-url="https://pindrinks.com/cart/add-to-cart" data-pgta-addcart>
+          <span class="pgta-plus" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg></span>
+          <span data-pgta-addcart-text>Ayrılmaz İkili'yi Sepete Ekle</span>
+        </a>
+        <a class="pgta-gocart" href="https://pindrinks.com/sepetim" data-pgta-gocart hidden>Sepete git →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.currentScript && document.currentScript.previousElementSibling;
+    if (!root || !root.classList.contains('pgta')) root = document.querySelector('.pgta');
+    if (!root) return;
+
+    // ---- ayarlar ----
+    // 5 şeker küpü = 5 yıldız. Konumlar oyun alanına göre % (l: sol, t: üst), dx/dy: süzülme, tm: süre
+    var CUBES = [
+      { l: 6,  t: 10, dx: '10px',  dy: '-12px', tm: '2.8s' },
+      { l: 76, t: 8,  dx: '-10px', dy: '10px',  tm: '3.2s' },
+      { l: 42, t: 3,  dx: '12px',  dy: '8px',   tm: '2.6s' },
+      { l: 4,  t: 58, dx: '12px',  dy: '-8px',  tm: '3.4s' },
+      { l: 80, t: 56, dx: '-12px', dy: '-10px', tm: '3s' }
+    ];
+    var STORE_KEY = 'pgta-ayrilmaz-ikili-kod';
+    // DEMO: Gerçekte kodlar sunucudan sırayla, tek kullanımlık ve kişi başı bir tane gelecek.
+    // O zaman yalnızca getCode() fonksiyonunu fetch('/...') ile değiştirmek yeterli.
+    var DEMO_CODES = ['2VBF9U', 'AD955A', 'UJ4E6U'];
+    var COUPON = null;
+    function getCode() {
+      return Promise.resolve(DEMO_CODES[Math.floor(Math.random() * DEMO_CODES.length)]);
+    }
+    function isCode(v) { return typeof v === 'string' && /^[A-Z0-9]{6}$/.test(v); }
+
+    var $ = function (s, el) { return (el || root).querySelector(s); };
+    var $$ = function (s, el) { return Array.prototype.slice.call((el || root).querySelectorAll(s)); };
+    var game = $('.pgta-game'), panel = $('.pgta-game-panel', game);
+    var playView = $('.pgta-play', game), winView = $('.pgta-win', game);
+    var startBtn = $('[data-pgta-start]'), ctaText = $('[data-pgta-cta-text]');
+    var hudStarsWrap = $('[data-pgta-hudstars]');
+    var hudStars = $$('.pgta-star', hudStarsWrap), gameStars = $$('[data-pgta-gamestars] .pgta-star', game);
+    var arena = $('[data-pgta-arena]', game), hint = $('[data-pgta-hint]', game);
+    var barFills = $$('.pgta-bar-fill', game), barTracks = $$('.pgta-bar-track', game);
+    var addBtn = $('[data-pgta-addcart]', game), addText = $('[data-pgta-addcart-text]', game), goCart = $('[data-pgta-gocart]', game);
+    var copyBtn = $('[data-pgta-copy]', game), copyText = $('[data-pgta-copy-text]', game);
+    var couponEl = $('[data-pgta-coupon]', game);
+    var popped = 0, solved = false, lastFocus = null, homeParent = game.parentNode;
+
+    function track(name) { try { (window.dataLayer = window.dataLayer || []).push({ event: name, kampanya: 'ayrilmaz-ikili' }); } catch (e) {} }
+    function store(v) { try { if (v === undefined) return localStorage.getItem(STORE_KEY); localStorage.setItem(STORE_KEY, v); } catch (e) { return null; } }
+
+    // şeker küpü (izometrik, şeker taneli)
+    var CUBE_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+      '<path d="M32 5 59 18.5 32 32 5 18.5Z" fill="#fff"/>' +
+      '<path d="M5 18.5 32 32v27L5 45.5Z" fill="#ece7f7"/>' +
+      '<path d="M59 18.5 32 32v27l27-13.5Z" fill="#d4cce9"/>' +
+      '<path d="M32 5 59 18.5 32 32 5 18.5Z M32 32v27" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/>' +
+      '<g fill="#bfb4dc" opacity=".8"><circle cx="18" cy="31" r="1.3"/><circle cx="24" cy="42" r="1.1"/><circle cx="14" cy="40" r="1"/>' +
+      '<circle cx="44" cy="34" r="1.2"/><circle cx="50" cy="42" r="1"/><circle cx="40" cy="47" r="1.1"/>' +
+      '<circle cx="28" cy="15" r="1"/><circle cx="38" cy="19" r="1.1"/><circle cx="33" cy="11" r=".9"/></g></svg>';
+
+    function setBars(p) {
+      barFills.forEach(function (f) { f.style.width = p + '%'; });
+      barTracks.forEach(function (t) { t.setAttribute('aria-valuenow', String(Math.round(p))); });
+    }
+    function buildCubes() {
+      $$('.pgta-cube', arena).forEach(function (c) { c.parentNode.removeChild(c); });
+      CUBES.forEach(function (c, i) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'pgta-cube';
+        b.setAttribute('aria-label', 'Şeker küpü ' + (i + 1));
+        b.style.cssText = 'left:' + c.l + '%;top:' + c.t + '%;--dx:' + c.dx + ';--dy:' + c.dy + ';--t:' + c.tm + ';animation-delay:-' + (i * 0.45) + 's';
+        b.innerHTML = CUBE_SVG;
+        b.addEventListener('click', function (e) { pop(b, e.detail === 0); }); // detail 0 = klavyeyle basıldı
+        arena.appendChild(b);
+      });
+    }
+
+    // ---- durumlar ----
+    function setSolvedUI(animate) {
+      solved = true;
+      couponEl.textContent = COUPON;
+      root.classList.add('is-solved');
+      hudStarsWrap.setAttribute('aria-label', 'Lezzet: 5 üzerinden 5 yıldız');
+      hudStars.forEach(function (s, i) {
+        if (animate) setTimeout(function () { s.classList.add('is-gold'); }, i * 120); else s.classList.add('is-gold');
+      });
+      ctaText.innerHTML = 'Kodun hazır: <small>' + COUPON + '</small>';
+    }
+    function resetPlay() {
+      popped = 0;
+      buildCubes();
+      setBars(100);
+      gameStars.forEach(function (s) { s.classList.remove('is-gold'); });
+      hint.textContent = 'Şeker küplerine dokun, hepsini patlat!';
+    }
+    function showView(win) { playView.hidden = win; winView.hidden = !win; }
+
+    // ---- aç / kapat ----
+    var mobileMQ = window.matchMedia ? window.matchMedia('(max-width: 991px)') : { matches: false };
+    function open() {
+      lastFocus = document.activeElement;
+      if (mobileMQ.matches) { document.body.appendChild(game); document.documentElement.style.overflow = 'hidden'; }
+      game.hidden = false;
+      if (solved) showView(true); else { showView(false); resetPlay(); }
+      if (!mobileMQ.matches && panel.scrollIntoView) panel.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      setTimeout(function () { (solved ? addBtn : $('.pgta-cube', arena)).focus({ preventScroll: true }); }, 50);
+      track(solved ? 'pgta_odul_tekrar' : 'pgta_oyun_basladi');
+    }
+    function close() {
+      game.hidden = true;
+      document.documentElement.style.overflow = '';
+      if (game.parentNode !== homeParent) homeParent.appendChild(game);
+      if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+    }
+
+    // ---- oyun ----
+    function pop(b, viaKeyboard) {
+      if (solved || game.hidden || b.classList.contains('is-pop')) return;
+      var hadFocus = viaKeyboard && document.activeElement === b;
+      if (!viaKeyboard && b.blur) b.blur();
+      b.classList.add('is-pop');
+      setTimeout(function () { b.setAttribute('data-gone', ''); }, 400);
+      gameStars[popped].classList.add('is-gold');
+      popped++;
+      setBars(100 * (1 - popped / CUBES.length));
+      if (navigator.vibrate) { try { navigator.vibrate(25); } catch (e) {} }
+      if (popped < CUBES.length) {
+        hint.textContent = (CUBES.length - popped) + ' küp kaldı, şeker azalıyor!';
+        if (hadFocus) { var next = $('.pgta-cube:not(.is-pop)', arena); if (next) next.focus({ preventScroll: true }); }
+      } else {
+        hint.textContent = 'Şeker sıfırlandı!';
+        track('pgta_oyun_tamamlandi');
+        getCode().then(function (code) {
+          COUPON = code; store(code);
+          setSolvedUI(true);
+          setTimeout(function () { showView(true); addBtn.focus({ preventScroll: true }); }, 800);
+        });
+      }
+    }
+    game.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Tab') { // odak dialog içinde kalsın
+        var f = $$('button:not([hidden]), a[href]:not([hidden])', game).filter(function (el) { return el.offsetParent !== null; });
+        if (!f.length) return;
+        if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+      }
+    });
+    game.addEventListener('click', function (e) { if (e.target === game) close(); });
+    $('[data-pgta-close]', game).addEventListener('click', close);
+    startBtn.addEventListener('click', open);
+
+    // ---- kupon kopyala ----
+    copyBtn.addEventListener('click', function () {
+      function done() {
+        copyBtn.classList.add('is-copied'); copyText.textContent = 'Kopyalandı ✓';
+        setTimeout(function () { copyBtn.classList.remove('is-copied'); copyText.textContent = 'Kopyala'; }, 2200);
+        track('pgta_kod_kopyalandi');
+      }
+      if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(COUPON).then(done, fallback); } else fallback();
+      function fallback() {
+        var ta = document.createElement('textarea'); ta.value = COUPON; ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;'; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {} document.body.removeChild(ta);
+      }
+    });
+
+    // ---- sepete ekle (sitenin kendi .add-to-cart-button akışı) ----
+    function added() {
+      addBtn.classList.remove('is-loading'); addBtn.classList.add('is-added');
+      addText.textContent = 'Sepete eklendi ✓'; goCart.hidden = false;
+    }
+    addBtn.addEventListener('click', function (e) {
+      track('pgta_sepete_ekle');
+      if (window.jQuery) {
+        // site jQuery ile isteği atar; sonucu butonun sınıflarından izle
+        addBtn.classList.add('is-loading'); addText.textContent = 'Ekleniyor…';
+        var sawLoading = false;
+        var mo = new MutationObserver(function () {
+          if (addBtn.classList.contains('active')) { mo.disconnect(); added(); return; }
+          if (addBtn.classList.contains('button-loading')) sawLoading = true;
+          else if (sawLoading) { mo.disconnect(); addBtn.classList.remove('is-loading'); addText.textContent = "Ayrılmaz İkili'yi Sepete Ekle"; }
+        });
+        mo.observe(addBtn, { attributes: true, attributeFilter: ['class'] });
+        return; // preventDefault'u sitenin handler'ı yapar
+      }
+      e.preventDefault();
+      if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) { // yalnızca önizleme: sepete eklemeyi taklit et
+        addBtn.classList.add('is-loading'); addText.textContent = 'Ekleniyor…'; setTimeout(added, 700);
+      } else { location.href = 'https://pindrinks.com/PAKET-LINKI-AYRILMAZ-IKILI'; }
+    });
+
+    // ---- açılış ----
+    var saved = store();
+    if (isCode(saved)) { COUPON = saved; setSolvedUI(false); }
+  })();
+</script>

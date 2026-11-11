@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Önizleme – Aranma Seviyesi Sıfır</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* pindrinks.com ana sayfa ortamını taklit eder (app.css'teki font tanımı) */
+  @font-face { font-family: 'Kabut Hitam'; src: url('https://cdn.pindrinks.com/KabutHitam.woff2') format('woff2'), url('https://cdn.pindrinks.com/KabutHitam.woff') format('woff'); font-weight: 400; font-display: swap; }
+  body { margin: 0; background: #fdfdfd; font-family: Poppins, serif; color: #163157; }
+  .container { max-width: 1330px; margin: 0 auto; padding: 0 15px; }
+  /* geliştirici çubuğu (sadece önizleme) */
+  .devbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 10001; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+    max-width: calc(100% - 24px); padding: 8px; border-radius: 16px; background: rgba(15, 18, 30, .9); box-shadow: 0 8px 24px rgba(0,0,0,.3); font-family: Poppins, sans-serif; }
+  .devbar span { color: #9aa3b5; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; align-self: center; padding: 0 6px; }
+  .devbar button { border: 0; border-radius: 10px; padding: 8px 12px; font: 600 13px Poppins, sans-serif; cursor: pointer; background: #2b3245; color: #fff; }
+  .devbar button:hover { background: #3a4460; }
+  .devbar button.primary { background: #ff5c9e; }
+  body { padding-bottom: 90px; }
+  @media (max-width: 600px) {
+    .devbar { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; bottom: 8px; padding: 6px; gap: 4px; }
+    .devbar span { display: none; }
+    .devbar button { flex: none; padding: 7px 10px; font-size: 12px; }
+  }
+  .fake-block { height: 120px; border-radius: 45px; background: #eef2f7; display: grid; place-items: center; font-weight: 800; font-size: 22px; margin: 30px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="fake-block">Ana sayfa — önceki bölüm</div>
+  <div id="slot"></div>
+  <div class="fake-block">Ana sayfa — sonraki bölüm</div>
+</div>
+<div class="devbar" aria-label="Geliştirici araçları">
+  <span>Önizleme</span>
+  <button type="button" class="primary" data-dev="reset">↺ Sıfırla (ilk hal)</button>
+  <button type="button" data-dev="play">▶ Oyunu aç</button>
+  <button type="button" data-dev="solved">★ Çözülmüş hal</button>
+  <button type="button" data-dev="win">🎁 Ödül ekranı</button>
+</div>
+<script>
+  // Geliştirici çubuğu: bileşenin her halini tek tıkla gösterir (siteye gitmez)
+  const DEV_KEY = 'pgta-ayrilmaz-ikili-kod', DEV_CODE = '2VBF9U';
+  function devReload(state, openAfter) {
+    try {
+      if (state) localStorage.setItem(DEV_KEY, state); else localStorage.removeItem(DEV_KEY);
+      if (openAfter) sessionStorage.setItem('dev-open', '1');
+    } catch (e) {}
+    location.reload();
+  }
+  document.querySelector('.devbar').addEventListener('click', e => {
+    const a = e.target.closest('button')?.dataset.dev; if (!a) return;
+    if (a === 'reset') devReload(null);
+    if (a === 'solved') devReload(DEV_CODE);
+    if (a === 'win') devReload(DEV_CODE, true);
+    if (a === 'play') {
+      if (localStorage.getItem(DEV_KEY)) devReload(null, true);
+      else document.querySelector('[data-pgta-start]')?.click();
+    }
+  });
+
+  fetch('aranma-seviyesi-sifir.html').then(r => r.text()).then(html => {
+    const slot = document.getElementById('slot');
+    slot.innerHTML = html;
+    slot.querySelectorAll('script').forEach(old => {
+      const s = document.createElement('script');
+      s.textContent = old.textContent.replace('document.currentScript && document.currentScript.previousElementSibling', 'null');
+      old.replaceWith(s);
+    });
+    const sec = slot.querySelector('.pgta');
+    try {
+      if (sessionStorage.getItem('dev-open')) {
+        sessionStorage.removeItem('dev-open');
+        sec.scrollIntoView({ block: 'center' });
+        setTimeout(() => slot.querySelector('[data-pgta-start]').click(), 300);
+      }
+    } catch (e) {}
+  });
+</script>
+</body>
+</html>
