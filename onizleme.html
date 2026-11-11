@@ -11,18 +11,17 @@
   @font-face { font-family: 'Kabut Hitam'; src: url('https://cdn.pindrinks.com/KabutHitam.woff2') format('woff2'), url('https://cdn.pindrinks.com/KabutHitam.woff') format('woff'); font-weight: 400; font-display: swap; }
   body { margin: 0; background: #fdfdfd; font-family: Poppins, serif; color: #163157; }
   .container { max-width: 1330px; margin: 0 auto; padding: 0 15px; }
-  /* geliştirici çubuğu (sadece önizleme) */
-  .devbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 10001; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
-    max-width: calc(100% - 24px); padding: 8px; border-radius: 16px; background: rgba(15, 18, 30, .9); box-shadow: 0 8px 24px rgba(0,0,0,.3); font-family: Poppins, sans-serif; }
-  .devbar span { color: #9aa3b5; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; align-self: center; padding: 0 6px; }
+  /* geliştirici çubuğu (sadece önizleme) — sayfanın en altında, sabit blok */
+  .devbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center;
+    width: max-content; max-width: 100%; margin: 0 auto 40px; padding: 8px; border-radius: 16px; background: #0f121e; font-family: Poppins, sans-serif; }
+  .devbar span { color: #9aa3b5; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; padding: 0 6px; }
   .devbar button { border: 0; border-radius: 10px; padding: 8px 12px; font: 600 13px Poppins, sans-serif; cursor: pointer; background: #2b3245; color: #fff; }
   .devbar button:hover { background: #3a4460; }
   .devbar button.primary { background: #ff5c9e; }
-  body { padding-bottom: 90px; }
   @media (max-width: 600px) {
-    .devbar { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; bottom: 8px; padding: 6px; gap: 4px; }
-    .devbar span { display: none; }
-    .devbar button { flex: none; padding: 7px 10px; font-size: 12px; }
+    .devbar { gap: 4px; padding: 6px; }
+    .devbar span { width: 100%; text-align: center; padding: 2px 0 4px; }
+    .devbar button { padding: 7px 10px; font-size: 12px; }
   }
   .fake-block { height: 120px; border-radius: 45px; background: #eef2f7; display: grid; place-items: center; font-weight: 800; font-size: 22px; margin: 30px 0; }
 </style>
@@ -32,13 +31,13 @@
   <div class="fake-block">Ana sayfa — önceki bölüm</div>
   <div id="slot"></div>
   <div class="fake-block">Ana sayfa — sonraki bölüm</div>
-</div>
-<div class="devbar" aria-label="Geliştirici araçları">
-  <span>Önizleme</span>
-  <button type="button" class="primary" data-dev="reset">↺ Sıfırla (ilk hal)</button>
-  <button type="button" data-dev="play">▶ Oyunu aç</button>
-  <button type="button" data-dev="solved">★ Çözülmüş hal</button>
-  <button type="button" data-dev="win">🎁 Ödül ekranı</button>
+  <div class="devbar" aria-label="Geliştirici araçları">
+    <span>Önizleme</span>
+    <button type="button" class="primary" data-dev="reset">↺ Sıfırla (ilk hal)</button>
+    <button type="button" data-dev="play">▶ Oyunu aç</button>
+    <button type="button" data-dev="solved">★ Çözülmüş hal</button>
+    <button type="button" data-dev="win">🎁 Ödül ekranı</button>
+  </div>
 </div>
 <script>
   // Geliştirici çubuğu: bileşenin her halini tek tıkla gösterir (siteye gitmez)
