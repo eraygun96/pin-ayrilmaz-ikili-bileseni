@@ -259,15 +259,42 @@
   .pgta-cube svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .35)); transition: transform .12s ease; }
   .pgta-cube:hover svg { transform: scale(1.1); }
   .pgta-cube:focus-visible { outline: 3px solid #fff; outline-offset: 2px; border-radius: 12px; }
-  .pgta-cube.is-pop { animation: pgta-cube-pop .4s ease forwards; pointer-events: none; }
+  .pgta-cube.is-pop { animation: pgta-cube-pop .42s cubic-bezier(.3, .9, .4, 1) forwards; pointer-events: none; }
   .pgta-cube.is-pop::after {
-    content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid var(--pgta-gold);
-    animation: pgta-ring .4s ease-out forwards;
+    content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 4px solid var(--pgta-gold);
+    animation: pgta-ring .45s ease-out forwards;
   }
   .pgta-cube[data-gone] { visibility: hidden; }
   @keyframes pgta-float { 0%, 100% { transform: translate(0, 0) rotate(-8deg); } 50% { transform: translate(var(--dx, 8px), var(--dy, -10px)) rotate(8deg); } }
-  @keyframes pgta-cube-pop { 0% { transform: scale(1); opacity: 1; } 45% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(.2); opacity: 0; } }
-  @keyframes pgta-ring { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+  /* önce ezilir, sonra büyüyüp dönerek dağılır */
+  @keyframes pgta-cube-pop {
+    0% { transform: scale(1) rotate(0); opacity: 1; }
+    18% { transform: scale(1.25, .78) rotate(-6deg); opacity: 1; }
+    42% { transform: scale(1.55) rotate(10deg); opacity: 1; filter: brightness(1.6); }
+    100% { transform: scale(.1) rotate(40deg); opacity: 0; }
+  }
+  @keyframes pgta-ring { from { transform: scale(.4); opacity: 1; } to { transform: scale(2); opacity: 0; } }
+
+  /* patlama efektleri: parlama + saçılan şeker kristalleri + alan sarsıntısı */
+  .pgta-flash {
+    position: absolute; width: 160px; height: 160px; margin: -80px 0 0 -80px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(255, 255, 255, 1), rgba(255, 220, 140, .7) 40%, rgba(255, 92, 158, .25) 65%, transparent 80%);
+    animation: pgta-flash .42s ease-out forwards;
+  }
+  @keyframes pgta-flash { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+  .pgta-crystal {
+    position: absolute; width: var(--s, 7px); height: var(--s, 7px); margin: calc(var(--s, 7px) / -2) 0 0 calc(var(--s, 7px) / -2);
+    border-radius: 2px; background: var(--c, #fff); pointer-events: none; box-shadow: 0 0 8px rgba(255, 255, 255, .8);
+    animation: pgta-burst .7s cubic-bezier(.15, .8, .3, 1) forwards;
+  }
+  @keyframes pgta-burst {
+    0% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(.4); opacity: 0; }
+  }
+  .pgta-arena.is-hit { animation: pgta-hit .26s ease; }
+  @keyframes pgta-hit { 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, -1px); } 80% { transform: translate(2px, 1px); } }
+  .pgta-bar-track.is-drop { animation: pgta-drop .45s ease; }
+  @keyframes pgta-drop { 30% { box-shadow: 0 0 0 3px rgba(255, 255, 255, .25), 0 0 16px rgba(255, 150, 190, .7); filter: brightness(1.5); } }
 
   /* şeker ve kalori barları: küp patladıkça azalır */
   .pgta-bars { display: grid; gap: 8px; margin: 0 0 10px; text-align: left; }
@@ -301,6 +328,13 @@
     font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #fff;
   }
   .pgta-coupon-label b { font-size: 40px; line-height: .9; font-weight: 800; letter-spacing: -.02em; color: var(--pgta-gold); text-shadow: 0 0 18px rgba(255, 201, 60, .55); }
+  .pgta-coupon-all { /* "Tüm ürünlerde geçerli" — gözden kaçmasın diye altın rozet */
+    display: flex; width: max-content; max-width: 100%; align-items: center; gap: 7px; margin: 0 auto 12px;
+    padding: 7px 14px 7px 10px; border-radius: 999px; background: var(--pgta-gold); color: var(--pgta-ink);
+    font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1;
+    box-shadow: 0 6px 16px rgba(255, 201, 60, .35);
+  }
+  .pgta-coupon-all svg { width: 16px; height: 16px; flex: none; }
   .pgta-coupon-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .pgta-coupon-code {
     padding: 6px 14px; border-radius: 12px; background: rgba(28, 16, 54, .55);
@@ -526,6 +560,10 @@
         <img class="pgta-badge" src="img/0-seker-kalori-beyaz.svg" alt="0 Şeker 0 Kalori" width="1643" height="815">
         <div class="pgta-coupon">
           <span class="pgta-coupon-label"><b>%40</b> indirim kodun</span>
+          <span class="pgta-coupon-all">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            Tüm ürünlerde geçerli
+          </span>
           <div class="pgta-coupon-row">
             <span class="pgta-coupon-code" data-pgta-coupon>------</span>
             <button type="button" class="pgta-copybtn" data-pgta-copy>
@@ -533,7 +571,7 @@
               <span data-pgta-copy-text>Kopyala</span>
             </button>
           </div>
-          <small>Tüm ürünlerde geçerli · Tek kullanımlık</small>
+          <small>Tek kullanımlık</small>
         </div>
         <!-- YAPILACAK: data-id = Ayrılmaz İkili paketinin ürün ID'si (sayı). Sepete ekleme sitenin kendi .add-to-cart-button akışıyla çalışır. -->
         <a href="#" class="add-to-cart-button pgta-addcart" data-id="AYRILMAZ_IKILI_URUN_ID" data-url="https://pindrinks.com/cart/add-to-cart" data-pgta-addcart>
@@ -654,16 +692,40 @@
     }
 
     // ---- oyun ----
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var CRYSTAL_COLORS = ['#fff', '#fff', '#fff3c4', '#ffd1e3', '#ffc93c'];
+    function burst(b) { // patlama noktasında parlama + saçılan şeker kristalleri + alan sarsıntısı
+      if (reduceMotion) return;
+      var ar = arena.getBoundingClientRect(), r = b.getBoundingClientRect();
+      var cx = r.left - ar.left + r.width / 2, cy = r.top - ar.top + r.height / 2;
+      var nodes = [];
+      var flash = document.createElement('span');
+      flash.className = 'pgta-flash'; flash.style.left = cx + 'px'; flash.style.top = cy + 'px';
+      nodes.push(flash);
+      for (var i = 0; i < 16; i++) {
+        var a = (Math.PI * 2 * i) / 16 + (Math.random() - .5) * .5, d = 60 + Math.random() * 55;
+        var c = document.createElement('span');
+        c.className = 'pgta-crystal';
+        c.style.cssText = 'left:' + cx + 'px;top:' + cy + 'px;--x:' + Math.round(Math.cos(a) * d) + 'px;--y:' + Math.round(Math.sin(a) * d) + 'px;' +
+          '--r:' + Math.round(Math.random() * 360 - 180) + 'deg;--s:' + (7 + Math.round(Math.random() * 6)) + 'px;--c:' + CRYSTAL_COLORS[i % CRYSTAL_COLORS.length];
+        nodes.push(c);
+      }
+      nodes.forEach(function (n) { arena.appendChild(n); });
+      setTimeout(function () { nodes.forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); }); }, 700);
+      arena.classList.remove('is-hit'); void arena.offsetWidth; arena.classList.add('is-hit');
+    }
     function pop(b, viaKeyboard) {
       if (solved || game.hidden || b.classList.contains('is-pop')) return;
       var hadFocus = viaKeyboard && document.activeElement === b;
       if (!viaKeyboard && b.blur) b.blur();
+      burst(b);
       b.classList.add('is-pop');
-      setTimeout(function () { b.setAttribute('data-gone', ''); }, 400);
+      setTimeout(function () { b.setAttribute('data-gone', ''); }, 420);
       gameStars[popped].classList.add('is-gold');
       popped++;
       setBars(100 * (1 - popped / CUBES.length));
-      if (navigator.vibrate) { try { navigator.vibrate(25); } catch (e) {} }
+      barTracks.forEach(function (t) { t.classList.remove('is-drop'); void t.offsetWidth; t.classList.add('is-drop'); });
+      if (navigator.vibrate) { try { navigator.vibrate([35, 30, 20]); } catch (e) {} }
       if (popped < CUBES.length) {
         hint.textContent = (CUBES.length - popped) + ' küp kaldı, şeker azalıyor!';
         if (hadFocus) { var next = $('.pgta-cube:not(.is-pop)', arena); if (next) next.focus({ preventScroll: true }); }

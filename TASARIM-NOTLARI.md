@@ -19,7 +19,8 @@ Son güncelleme: 2026-11-11
   Başlık 2 satır ("PEŞİNDEKİ TEK ŞEY" / "5 YILDIZLI LEZZET"), tenekeler 215px,
   "Sınırlı sayıda" mobil ve tablette butonun üstünde.
 - **Ödül ekranı:** "Görev tamamlandı · Şeker sıfırlandı!" + 5 altın yıldız + 0 Şeker Kalori logosu
-  (alt metin yok) + büyük parlayan **%40** ve altın çerçeveli, nabız gibi parlayan kod kutusu +
+  (alt metin yok) + büyük parlayan **%40** ve altın çerçeveli, nabız gibi parlayan kod kutusu
+  (kodun üstünde altın rozet: "✓ Tüm ürünlerde geçerli"; altta küçük "Tek kullanımlık") +
   sepete ekle butonunda sitedeki lacivert daire içinde beyaz artı ikonu +
   **%40 indirim kodu** (6 hane harf+rakam, tüm ürünlerde geçerli, tek kullanımlık, tek tuşla kopyala) +
   **"Ayrılmaz İkili'yi Sepete Ekle"** (sitenin kendi .add-to-cart-button akışı) → "Sepete git" linki.
