@@ -365,6 +365,14 @@
   .pgta-addcart.is-added { background: #2fbf71; box-shadow: 0 10px 26px rgba(47, 191, 113, .4); pointer-events: none; }
   .pgta-gocart { display: inline-block; margin-top: 12px; color: #fff; font-weight: 600; font-size: 15px; text-decoration: underline; }
   .pgta-gocart[hidden] { display: none; }
+  /* masaüstü ödül ekranı: daha geniş panel, iki sütun → bölümün içine kaydırmadan sığar */
+  @media (min-width: 992px) {
+    .pgta-game-panel.is-win { max-width: 780px; padding: 54px 32px 28px; }
+    .pgta-win:not([hidden]) { display: grid; grid-template-columns: 270px 1fr; gap: 30px; align-items: center; }
+    .pgta-win .pgta-game-kicker { padding: 0; }
+    .pgta-win-head .pgta-badge { margin-bottom: 0; }
+    .pgta-win-body .pgta-gocart { margin-top: 10px; }
+  }
 
   /* --- tablet & mobil --- */
   @media (max-width: 991px) {
@@ -548,6 +556,7 @@
       </div>
 
       <div class="pgta-win" hidden>
+       <div class="pgta-win-head">
         <p class="pgta-game-kicker">Görev tamamlandı</p>
         <h3 class="pgta-game-title">Şeker sıfırlandı!</h3>
         <div class="pgta-stars" aria-label="Lezzet: 5 yıldız" role="img">
@@ -558,6 +567,8 @@
           <svg class="pgta-star is-gold" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>
         </div>
         <img class="pgta-badge" src="img/0-seker-kalori-beyaz.svg" alt="0 Şeker 0 Kalori" width="1643" height="815">
+       </div>
+       <div class="pgta-win-body">
         <div class="pgta-coupon">
           <span class="pgta-coupon-label"><b>%40</b> indirim kodun</span>
           <span class="pgta-coupon-all">
@@ -579,6 +590,7 @@
           <span data-pgta-addcart-text>Ayrılmaz İkili'yi Sepete Ekle</span>
         </a>
         <a class="pgta-gocart" href="https://pindrinks.com/sepetim" data-pgta-gocart hidden>Sepete git →</a>
+       </div>
       </div>
     </div>
   </div>
@@ -671,7 +683,7 @@
       gameStars.forEach(function (s) { s.classList.remove('is-gold'); });
       hint.textContent = 'Şeker küplerine dokun, hepsini patlat!';
     }
-    function showView(win) { playView.hidden = win; winView.hidden = !win; }
+    function showView(win) { playView.hidden = win; winView.hidden = !win; panel.classList.toggle('is-win', win); }
 
     // ---- aç / kapat ----
     var mobileMQ = window.matchMedia ? window.matchMedia('(max-width: 991px)') : { matches: false };

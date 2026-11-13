@@ -24,6 +24,7 @@ Son güncelleme: 2026-11-11
   sepete ekle butonunda sitedeki lacivert daire içinde beyaz artı ikonu +
   **%40 indirim kodu** (6 hane harf+rakam, tüm ürünlerde geçerli, tek kullanımlık, tek tuşla kopyala) +
   **"Ayrılmaz İkili'yi Sepete Ekle"** (sitenin kendi .add-to-cart-button akışı) → "Sepete git" linki.
+- **Ödül ekranı masaüstünde iki sütun** (solda başlık/yıldızlar/logo, sağda kod kutusu + sepete ekle), panel 780px genişliğinde; bölümün içine kaydırmadan sığar (1024–1440px test edildi). Mobilde tek sütun, tam ekran.
 - Çözen kullanıcı ve aldığı kod hatırlanır: HUD altın yıldız + "Lezzet · 5/5", buton "Kodun hazır: KOD".
 - **DEMO kodları:** 2VBF9U, AD955A, UJ4E6U (getCode() rastgele birini verir). Gerçekte kodlar sunucudan sırayla, kişi başı bir tane gelecek; sadece getCode() değişecek.
 - **Fiyat / ödül etiketi tamamen kaldırıldı** (tenekelerin altında kart yok).
